@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  HOSPITAL_ADMIN
+}
+
+model User {
+  id           Int                  @id @default(autoincrement())
+  firstName    String
+  lastName     String
+  prefix       String?
+  email        String               @unique
+  password     String
+  role         Role
+  hospitalId   String?
+  hospital     Hospital?            @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  isVerified   Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  confirmation AccountConfirmation?
+  resets       PasswordReset[]
+}
+
+model AccountConfirmation {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  password  String
+  expiresAt DateTime
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("passwordResets")
+}
+
+model Patient {
+  id        String   @id @default(uuid())
+
+  // Basic Information
+  firstName String
+  lastName  String
+
+  gender    Gender
+  dateOfBirth DateTime?
+
+  nationalId String? @unique
+  phoneNumber String
+  email String @unique
+
+  emergencyContactName  String?
+  emergencyContactPhone String?
+
+  province String
+  district String
+  sector   String
+  cell     String
+  village  String
+
+  disabilityType DisabilityType?
+  conditionNotes String?
+
+  bloodType BloodType?
+
+  insuranceProvider String?
+  insuranceNumber   String?
+
+  allergies        String?
+  medications      String?
+  mobilityStatus   String?
+  requiresSpecialist Boolean @default(false)
+
+  profileImage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum BloodType {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+enum DisabilityType {
+  DOWN_SYNDROME
+  AUTISM
+  VISUAL_IMPAIRMENT
+  HEARING_IMPAIRMENT
+  MOBILITY_DISABILITY
+  CEREBRAL_PALSY
+  EPILEPSY
+  OTHER
+}
+
+model Hospital {
+  id        String @id @default(uuid())
+  name      String
+  type      HospitalType
+  phone     String?
+  email     String?
+
+  // Location (Rwanda structure)
+  province  String
+  district  String
+  sector    String?
+  cell      String?
+
+  // Status
+  isActive  Boolean @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+}
+
+enum HospitalType {
+  CLINIC
+  HEALTH_CENTER
+  DISTRICT_HOSPITAL
+  REFERRAL_HOSPITAL
+  SPECIALIZED_CENTER
+}
