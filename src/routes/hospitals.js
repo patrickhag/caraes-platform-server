@@ -13,6 +13,7 @@ const hospitalTypes = [
   "SPECIALIZED_CENTER",
 ];
 
+// GET ALL HOSPITALS
 hospitalsRouter.get(
   "/",
   requireAuth,
@@ -41,6 +42,113 @@ hospitalsRouter.get(
   },
 );
 
+// GET A SINGLE HOSPITAL
+hospitalsRouter.get(
+  "/:id",
+  requireAuth,
+  requireRole("ADMIN", "HOSPITAL_ADMIN"),
+  async (request, response, next) => {
+    try {
+      const { id } = request.params;
+
+      // HOSPITAL_ADMIN can only view their own hospital
+      if (
+        request.user.role === "HOSPITAL_ADMIN" &&
+        request.user.hospitalId !== id
+      ) {
+        return response.status(403).json({ message: "Access denied." });
+      }
+
+      const hospital = await prisma.hospital.findUnique({
+        where: { id },
+        include: {
+          users: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              prefix: true,
+              email: true,
+              role: true,
+              isVerified: true,
+              createdAt: true,
+            },
+            orderBy: { firstName: "asc" },
+          },
+        },
+      });
+
+      if (!hospital) {
+        return response.status(404).json({ message: "Hospital not found." });
+      }
+
+      response.json(hospital);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// UPDATE HOSPITALS INFORMATION
+hospitalsRouter.patch(
+  "/:id",
+  requireAuth,
+  requireRole("ADMIN"),
+  async (request, response, next) => {
+    try {
+      const { id } = request.params;
+      const {
+        name,
+        type,
+        phone,
+        email,
+        province,
+        district,
+        sector,
+        cell,
+        isActive,
+      } = request.body;
+
+      const existing = await prisma.hospital.findUnique({ where: { id } });
+      if (!existing) {
+        return response.status(404).json({ message: "Hospital not found." });
+      }
+
+      if (type && !hospitalTypes.includes(type)) {
+        return response.status(400).json({ message: "Invalid hospital type." });
+      }
+
+      const hospital = await prisma.hospital.update({
+        where: { id },
+        data: {
+          ...(name !== undefined && { name: String(name).trim() }),
+          ...(type !== undefined && { type }),
+          ...(phone !== undefined && {
+            phone: phone ? String(phone).trim() : null,
+          }),
+          ...(email !== undefined && {
+            email: email ? String(email).trim() : null,
+          }),
+          ...(province !== undefined && { province: String(province).trim() }),
+          ...(district !== undefined && { district: String(district).trim() }),
+          ...(sector !== undefined && {
+            sector: sector ? String(sector).trim() : null,
+          }),
+          ...(cell !== undefined && {
+            cell: cell ? String(cell).trim() : null,
+          }),
+          ...(typeof isActive === "boolean" && { isActive }),
+        },
+      });
+
+      response.json(hospital);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// CREATE A HOSPITAL
 hospitalsRouter.post(
   "/",
   requireAuth,

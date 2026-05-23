@@ -51,6 +51,7 @@ export function userSelect() {
       },
     },
     isVerified: true,
+    isActive: true,
     createdAt: true,
     updatedAt: true,
   };

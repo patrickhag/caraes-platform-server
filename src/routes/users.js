@@ -107,18 +107,98 @@ usersRouter.get("/confirm/:token", async (request, response, next) => {
   }
 });
 
-usersRouter.get("/", requireAuth, requireRole("ADMIN"), async (request, response) => {
-  try {
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: userSelect(),
-    });
+usersRouter.get(
+  "/",
+  requireAuth,
+  requireRole("ADMIN"),
+  async (request, response) => {
+    try {
+      const users = await prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        select: userSelect(),
+      });
 
-    response.status(200).json(users);
-  } catch (error) {
-    response.status(500).json(error.message);
-  }
-});
+      response.status(200).json(users);
+    } catch (error) {
+      response.status(500).json(error.message);
+    }
+  },
+);
+
+usersRouter.get(
+  "/:id",
+  requireAuth,
+  requireRole("ADMIN"),
+  async (request, response, next) => {
+    try {
+      const { id } = request.params;
+
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: userSelect(),
+      });
+
+      if (!user) {
+        return response.status(404).json({ message: "User not found." });
+      }
+
+      response.json(user);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+usersRouter.patch(
+  "/:id",
+  requireAuth,
+  requireRole("ADMIN"),
+  async (request, response, next) => {
+    try {
+      const { id } = request.params;
+
+      const existing = await prisma.user.findUnique({ where: { id } });
+      if (!existing) {
+        return response.status(404).json({ message: "User not found." });
+      }
+
+      // Prevent disabling your own account
+      if (request.user.id === id && request.body.isActive === false) {
+        return response
+          .status(400)
+          .json({ message: "You cannot disable your own account." });
+      }
+
+      const { firstName, lastName, prefix, role, hospitalId, isActive } =
+        request.body;
+
+      if (role && !roles.includes(role)) {
+        return response.status(400).json({ message: "Invalid user role." });
+      }
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: {
+          ...(firstName !== undefined && {
+            firstName: String(firstName).trim(),
+          }),
+          ...(lastName !== undefined && { lastName: String(lastName).trim() }),
+          ...(prefix !== undefined && {
+            prefix: prefix ? String(prefix).trim() : null,
+          }),
+          ...(role !== undefined && { role }),
+          ...(hospitalId !== undefined && { hospitalId: hospitalId || null }),
+          ...(typeof isActive === "boolean" && { isActive }),
+        },
+        select: userSelect(),
+      });
+
+      response.json(user);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 usersRouter.post(
   "/",

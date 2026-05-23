@@ -13,7 +13,7 @@ enum Role {
 }
 
 model User {
-  id           Int                  @id @default(autoincrement())
+  id           String               @id @default(uuid())
   firstName    String
   lastName     String
   prefix       String?
@@ -23,6 +23,7 @@ model User {
   hospitalId   String?
   hospital     Hospital?            @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
   isVerified   Boolean              @default(false)
+  isActive     Boolean              @default(true)
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   confirmation AccountConfirmation?
@@ -33,7 +34,7 @@ model AccountConfirmation {
   id        Int      @id @default(autoincrement())
   token     String   @unique
   expiresAt DateTime
-  userId    Int      @unique
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
@@ -43,7 +44,7 @@ model PasswordReset {
   token     String   @unique
   password  String
   expiresAt DateTime
-  userId    Int
+  userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
@@ -61,8 +62,8 @@ model Patient {
   dateOfBirth DateTime?
 
   nationalId String? @unique
-  phoneNumber String
-  email String @unique
+  phoneNumber String?
+  email String? @unique
 
   emergencyContactName  String?
   emergencyContactPhone String?

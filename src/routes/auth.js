@@ -57,6 +57,13 @@ authRouter.post("/login", async (request, response, next) => {
       });
     }
 
+    if (!user.isActive) {
+      return response.status(403).json({
+        message:
+          "Your account has been disabled. Please contact an administrator.",
+      });
+    }
+
     const passwordMatches =
       user.password === password ||
       (await bcrypt.compare(password, user.password));

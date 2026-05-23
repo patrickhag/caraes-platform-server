@@ -20,6 +20,13 @@ export async function requireAuth(request, response, next) {
         .json({ message: "Invalid or expired token." });
     }
 
+    // Reject tokens issued before the UUID migration (id would be a number)
+    if (typeof decodedToken.id !== "string") {
+      return response
+        .status(401)
+        .json({ message: "Session expired. Please log in again." });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: decodedToken.id },
       select: {
@@ -31,11 +38,18 @@ export async function requireAuth(request, response, next) {
         role: true,
         hospitalId: true,
         isVerified: true,
+        isActive: true,
       },
     });
 
     if (!user) {
       return response.status(401).json({ message: "User no longer exists." });
+    }
+
+    if (!user.isActive) {
+      return response
+        .status(403)
+        .json({ message: "Your account has been disabled." });
     }
 
     request.user = user;
